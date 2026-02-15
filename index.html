@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 新年愿景 - 诗意空间</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:italic,wght@600&family=Noto+Serif+SC:wght@300;600&family=Playfair+Display:ital,wght@1,600&display=swap');
+
+        :root {
+            --lace-gold: #d4af37;
+            --ethereal-cyan: #b0fbff;
+            --festive-red: #ff4d4d;
+            --glass-bg: rgba(15, 10, 10, 0.45); /* 高透明度氛围感 */
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: #000; color: #fff; overflow: hidden;
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        #app-container {
+            position: relative;
+            width: 100vw; height: 100vh;
+            background: #000;
+        }
+
+        #video-container {
+            position: absolute; inset: 0; z-index: 5;
+        }
+
+        video {
+            width: 100%; height: 100%; object-fit: cover;
+            transform: scaleX(-1);
+            filter: contrast(1.1) brightness(0.85) saturate(0.9);
+        }
+
+        canvas#canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20;
+            pointer-events: none;
+        }
+
+        /* 顶部标题 */
+        .top-banner {
+            position: absolute; top: 40px; width: 100%; text-align: center; z-index: 30;
+        }
+        .banner-text {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600; font-size: 2.2rem; letter-spacing: 12px;
+            color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.7), 0 0 10px var(--ethereal-cyan);
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #fff; }
+            to { text-shadow: 0 0 35px var(--festive-red), 0 0 15px #fff; }
+        }
+
+        /* 侧边指南 */
+        .side-guides {
+            position: absolute; right: 30px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 20px; z-index: 30;
+        }
+        .guide-item {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            padding: 14px 18px; border-radius: 12px; display: flex; align-items: center; gap: 15px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .guide-label { font-size: 0.65rem; text-align: right; line-height: 1.6; color: rgba(255,255,255,0.9); letter-spacing: 1px; }
+        .guide-icon { width: 10px; height: 10px; border: 1px solid var(--ethereal-cyan); border-radius: 50%; box-shadow: 0 0 15px var(--ethereal-cyan); }
+
+        /* 透明诗歌卡片 */
+        #poetry-card {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            width: 88%; max-width: 580px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(60px) saturate(180%);
+            -webkit-backdrop-filter: blur(60px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 80px 60px; text-align: center;
+            opacity: 0; visibility: hidden;
+            transition: all 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+            z-index: 100;
+            border-radius: 4px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+        }
+        #poetry-card.active { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
+
+        .poetry-title { font-size: 0.9rem; text-transform: uppercase; color: var(--lace-gold); letter-spacing: 6px; margin-bottom: 35px; font-weight: 600; }
+        .poetry-text { font-size: 1.6rem; line-height: 2.2; color: #fff; margin-bottom: 45px; letter-spacing: 2px; font-weight: 300; }
+        .source-box { font-size: 0.85rem; color: rgba(255,255,255,0.6); border-top: 1px solid rgba(212, 175, 55, 0.25); padding-top: 30px; }
+
+        /* 蕾丝边框 */
+        .global-lace {
+            position: fixed; inset: 0; border: 40px solid transparent;
+            border-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0C60 20 100 20 100 50C100 80 60 80 50 100C40 80 0 80 0 50C0 20 40 20 50 0Z' fill='none' stroke='%23ff4d4d' stroke-width='0.2' opacity='0.15'/%3E%3C/svg%3E") 45 round;
+            z-index: 200; pointer-events: none;
+        }
+
+        .energy-counter {
+            position: absolute; bottom: 60px; right: 60px; text-align: right; z-index: 30;
+        }
+
+        #interact-overlay {
+            position: fixed; inset: 0; z-index: 999;
+            background: rgba(0,0,0,0.92);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(15px); cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="interact-overlay" onclick="startExperience()">
+        <div class="text-white text-center px-10">
+            <div class="mb-4 text-[10px] tracking-[0.8em] opacity-50 uppercase">2026 庆典视觉</div>
+            <div class="text-3xl font-thin tracking-[0.3em] uppercase leading-relaxed">Happy New Year<br>开启诗意之年</div>
+            <div class="mt-12 text-[9px] tracking-[0.5em] opacity-40 italic">点击开始全感官交互体验</div>
+        </div>
+    </div>
+
+    <div class="global-lace"></div>
+
+    <div id="app-container">
+        <div id="video-container">
+            <video id="input_video"></video>
+        </div>
+        
+        <div class="top-banner">
+            <div class="banner-text">HAPPY NEW YEAR 2026</div>
+        </div>
+
+        <canvas id="canvas"></canvas>
+
+        <div class="side-guides">
+            <div class="guide-item">
+                <div class="guide-label">捏合<br>PINCH · 积蓄火花</div>
+                <div class="guide-icon"></div>
+            </div>
+            <div class="guide-item">
+                <div class="guide-label">张开<br>SPREAD · 绽放 (3次)</div>
+                <div class="guide-icon" style="background:var(--festive-red)"></div>
+            </div>
+            <div class="guide-item">
+                <div class="guide-label">挥手<br>WAVE · 关闭卡片</div>
+                <div class="guide-icon" style="border-radius: 0; border: 1px solid #fff;"></div>
+            </div>
+        </div>
+
+        <div class="energy-counter">
+            <div class="text-[10px] opacity-40 tracking-[0.6em] uppercase mb-2">绽放计数</div>
+            <div id="spread-counter" class="text-7xl font-thin tracking-tighter text-white/95">0 / 3</div>
+        </div>
+    </div>
+
+    <div id="poetry-card">
+        <div class="poetry-title">西方文学经典选萃</div>
+        <div id="poem-body" class="poetry-text"></div>
+        <div class="source-box">
+            <div id="poem-author" class="font-bold mb-1 uppercase tracking-[3px]"></div>
+            <div id="poem-source" class="italic opacity-60 text-[11px]"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        const videoElement = document.getElementById('input_video');
+        const canvasElement = document.getElementById('canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const counterEl = document.getElementById('spread-counter');
+        const cardEl = document.getElementById('poetry-card');
+
+        // 音效系统 (Web Audio API)
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioCtx();
+        }
+
+        // 小粒子声音
+        function playSparkleSound(frequency = 1100, volume = 0.04, duration = 0.1) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(frequency + Math.random() * 600, audioCtx.currentTime);
+            gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        // 烟花大爆炸声
+        function playExplosionSound() {
+            if (!audioCtx) return;
+            const noise = audioCtx.createOscillator();
+            const noiseGain = audioCtx.createGain();
+            noise.type = 'triangle';
+            noise.frequency.setValueAtTime(140, audioCtx.currentTime);
+            noise.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.7);
+            noiseGain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            noiseGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.7);
+            noise.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+            noise.start();
+            noise.stop(audioCtx.currentTime + 0.7);
+            // 伴随清脆火花
+            for(let i=0; i<10; i++) setTimeout(() => playSparkleSound(1400, 0.03, 0.25), i * 35);
+        }
+
+        window.startExperience = () => {
+            initAudio();
+            document.getElementById('interact-overlay').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('interact-overlay').style.display = 'none';
+            }, 1000);
+        };
+
+        let spreadCount = 0;
+        let particles = [];
+        let decors = []; 
+        let isHandSpread = false;
+        let handHistory = { Left: [], Right: [] };
+        const WAVE_THRESHOLD = 0.35;
+        const WAVE_FRAMES = 15;
+
+        // 经典诗歌库 (已翻译为中文)
+        const poems = [
+            { text: "“希望”是个羽翼丰盈之物，\n栖息在人的灵魂深处。", author: "Emily Dickinson (艾米莉·狄金森)", source: "《“希望”是个羽翼丰盈之物》" },
+            { text: "这世界对我们而言过于沉重；\n早晚我们都在索求与挥霍中，\n荒废了我们的生命之力。", author: "William Wordsworth (威廉·华兹华斯)", source: "《世界对我们而言过于沉重》" },
+            { text: "既然生命不是一段段落，\n那么死亡，我想，\n也不应是括号。", author: "e. e. cummings (e.e.肯明斯)", source: "《既然感觉是第一位的》" },
+            { text: "我，是命运的主人；\n我，是灵魂的统帅。", author: "William Ernest Henley (威廉·欧内斯特·亨利)", source: "《成事在人》" },
+            { text: "美即是真，真即是美，\n这就是你在世上所知的一切，\n也是你所需知的一切。", author: "John Keats (约翰·济慈)", source: "《希腊古瓮颂》" },
+            { text: "如果冬天来了，\n春天还会远吗？", author: "Percy Bysshe Shelley (珀西·比希·雪莱)", source: "《西风颂》" }
+        ];
+
+        class FloatingDecor {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * canvasElement.width;
+                this.y = Math.random() * canvasElement.height;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = (Math.random() - 0.5) * 0.4;
+                this.speedY = (Math.random() - 0.5) * 0.4;
+                this.opacity = Math.random() * 0.4 + 0.1;
+            }
+            update() {
+                this.x += this.speedX; this.y += this.speedY;
+                if (this.x < 0 || this.x > canvasElement.width || this.y < 0 || this.y > canvasElement.height) this.reset();
+            }
+            draw() {
+                canvasCtx.globalAlpha = this.opacity;
+                canvasCtx.fillStyle = '#ff4d4d';
+                canvasCtx.beginPath();
+                canvasCtx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                canvasCtx.fill();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                this.size = Math.random() * 3 + 1;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 12 + 4;
+                this.speedX = Math.cos(angle) * speed;
+                this.speedY = Math.sin(angle) * speed;
+                this.alpha = 1;
+                this.history = [];
+            }
+            update() {
+                this.history.push({x: this.x, y: this.y});
+                if(this.history.length > 10) this.history.shift();
+                this.x += this.speedX; this.y += this.speedY;
+                this.speedY += 0.15; // 重力感
+                this.alpha -= 0.015;
+            }
+            draw() {
+                if(this.history.length < 2) return;
+                canvasCtx.globalAlpha = this.alpha;
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(this.history[0].x, this.history[0].y);
+                for(let p of this.history) canvasCtx.lineTo(p.x, p.y);
+                canvasCtx.strokeStyle = this.color;
+                canvasCtx.lineWidth = this.size;
+                canvasCtx.lineCap = 'round';
+                canvasCtx.stroke();
+            }
+        }
+
+        function createFirework(x, y, isBurst = false) {
+            const colors = ['#ff4d4d', '#ffd700', '#ffffff', '#b0fbff', '#ffb7c5'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const pCount = isBurst ? 120 : 18;
+            for(let i=0; i<pCount; i++) particles.push(new Particle(x, y, color));
+            
+            if (isBurst) {
+                playExplosionSound();
+            } else {
+                playSparkleSound(1200, 0.05, 0.1);
+            }
+        }
+
+        function updateCounter() {
+            counterEl.innerText = `${Math.min(spreadCount, 3)} / 3`;
+        }
+
+        function showPoem() {
+            const p = poems[Math.floor(Math.random() * poems.length)];
+            document.getElementById('poem-body').innerText = p.text;
+            document.getElementById('poem-author').innerText = p.author;
+            document.getElementById('poem-source').innerText = `选自：${p.source}`;
+            cardEl.classList.add('active');
+            createFirework(canvasElement.width/2, canvasElement.height/3, true);
+        }
+
+        window.closeCard = () => {
+            cardEl.classList.remove('active');
+            spreadCount = 0;
+            updateCounter();
+        };
+
+        function initDecors() { for (let i = 0; i < 80; i++) decors.push(new FloatingDecor()); }
+
+        function animate() {
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            decors.forEach(d => { d.update(); d.draw(); });
+            particles = particles.filter(p => p.alpha > 0);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        }
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.8,
+            minTrackingConfidence: 0.8
+        });
+
+        let lastPinchTime = { Left: 0, Right: 0 };
+
+        hands.onResults((results) => {
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+            
+            if (results.multiHandLandmarks) {
+                let currentFrameSpread = false;
+
+                results.multiHandLandmarks.forEach((landmarks, index) => {
+                    const label = results.multiHandedness[index].label;
+                    const x = (1 - landmarks[8].x) * canvasElement.width;
+                    const y = landmarks[8].y * canvasElement.height;
+                    
+                    // 挥手检测
+                    const tipX = landmarks[8].x;
+                    handHistory[label].push(tipX);
+                    if(handHistory[label].length > WAVE_FRAMES) handHistory[label].shift();
+                    if(cardEl.classList.contains('active')) {
+                        const minX = Math.min(...handHistory[label]);
+                        const maxX = Math.max(...handHistory[label]);
+                        if((maxX - minX) > WAVE_THRESHOLD) closeCard();
+                    }
+
+                    // 捏合与张开检测
+                    const dist = Math.hypot(landmarks[4].x - landmarks[8].x, landmarks[4].y - landmarks[8].y);
+
+                    if (dist > 0.28) {
+                        currentFrameSpread = true;
+                        const now = Date.now();
+                        if(now - lastPinchTime[label] > 180) {
+                            createFirework(x, y, false);
+                            lastPinchTime[label] = now;
+                        }
+                    }
+                    
+                    // 指尖视觉点
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(x, y, 12, 0, Math.PI*2);
+                    canvasCtx.fillStyle = dist > 0.28 ? 'rgba(255,255,255,0.4)' : 'rgba(176,251,255,0.5)';
+                    canvasCtx.fill();
+                });
+
+                if (currentFrameSpread && !isHandSpread) {
+                    if (!cardEl.classList.contains('active')) {
+                        spreadCount++;
+                        updateCounter();
+                        if (spreadCount >= 3) showPoem();
+                    }
+                    isHandSpread = true;
+                } else if (!currentFrameSpread) {
+                    isHandSpread = false;
+                }
+            }
+        });
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => { await hands.send({image: videoElement}); },
+            width: 1280, height: 720
+        });
+        camera.start();
+        initDecors();
+        animate();
+    </script>
+</body>
+</html>
